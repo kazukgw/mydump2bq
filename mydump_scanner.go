@@ -2,11 +2,12 @@ package mydump2bq
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
-	"strings"
+
+	"github.com/pkg/errors"
 )
 
 var valuesExp *regexp.Regexp
@@ -33,21 +34,17 @@ func NewMyDumpScanner(r io.Reader, maxBufSize int) *MyDumpScanner {
 
 func (mysc *MyDumpScanner) Scan() (*Row, error) {
 	if mysc.Scanner.Scan() {
+		line := mysc.Scanner.Text()
 		if m := valuesExp.FindAllStringSubmatch(line, -1); len(m) == 1 {
 			table := m[0][1]
 
-			values, err := parseValues(m[0][2])
+			values, err := mysc.parseValues(m[0][2])
 			if err != nil {
-				return errors.Errorf("parse values %v err", line)
-			}
-
-			if err = h.Data(db, table, values); err != nil && err != ErrSkip {
-				return errors.Trace(err)
+				return nil, errors.Errorf("parse values %v err", line)
 			}
 		}
 	}
 	return nil, errors.New("values not found")
-
 }
 
 func (mysc *MyDumpScanner) parseValues(str string) ([]string, error) {
@@ -56,7 +53,7 @@ func (mysc *MyDumpScanner) parseValues(str string) ([]string, error) {
 
 	// a simple implementation, may be more robust later.
 
-	values := make([]string, 0, 8)
+	values := make([]interface{}, 0, 8)
 
 	i := 0
 	for i < len(str) {
@@ -65,8 +62,9 @@ func (mysc *MyDumpScanner) parseValues(str string) ([]string, error) {
 			j := i + 1
 			for ; j < len(str) && str[j] != ','; j++ {
 			}
+
 			values = append(values, str[i:j])
-			// skip ,
+
 			i = j + 1
 		} else {
 			// read string until another single quote
@@ -92,7 +90,7 @@ func (mysc *MyDumpScanner) parseValues(str string) ([]string, error) {
 
 			value := str[i : j+1]
 			if escaped {
-				value = unescapeString(value)
+				value = mysc.unescapeString(value)
 			}
 			values = append(values, value)
 			// skip ' and ,
