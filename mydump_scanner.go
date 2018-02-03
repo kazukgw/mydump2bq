@@ -2,10 +2,10 @@ package mydump2bq
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"os"
-	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -15,47 +15,47 @@ func init() {
 	valuesExp = regexp.MustCompile("^INSERT INTO `(.+?)` VALUES \\((.+)\\);$")
 }
 
-func main() {
-	buf := []byte{}
-	sc := bufio.NewScanner(os.Stdin)
-}
-
-type Streamer struct {
-}
-
-type Scanner struct {
-	Buf        []byte
+type MyDumpScanner struct {
+	Buf        *[]byte
 	MaxBufSize int
-	*bufio.Scanner
+	Scanner    *bufio.Scanner
 }
 
-func NewScanner(r io.Reader, maxBufSize int) *Scanner {
-	sc := &Scanner{
-		Buf:        []byte{},
+func NewMyDumpScanner(r io.Reader, maxBufSize int) *MyDumpScanner {
+	buf := []byte{}
+	sc := bufio.NewScanner(r)
+	sc.Buffer(buf, maxBufSize)
+	return &MyDumpScanner{
 		MaxBufSize: maxBufSize,
-		Scanner:    bufio.NewScanner(r),
-	}
-	sc.Scanner.Buffer(sc.Buf, sc.MaxBufSize)
-	return sc
-}
-
-func (sc *Scanner) Scan() {
-	for sc.Scanner.Scan() {
-		t := sc.Scanner.Text()
-		if !strings.HasPrefix(t, "INSERT INTO") {
-			continue
-		}
-
-		matchStr := valuesExp.FindAllString(t, 2)
-		if matchStr == nil {
-			continue
-		}
-		table := matchStr[0]
-		values := matchStr[1]
+		Scanner:    sc,
 	}
 }
 
-func (sc *Scanner) parse(str string) ([]string, error) {
+func (mysc *MyDumpScanner) Scan() (*Row, error) {
+	if mysc.Scanner.Scan() {
+		if m := valuesExp.FindAllStringSubmatch(line, -1); len(m) == 1 {
+			table := m[0][1]
+
+			values, err := parseValues(m[0][2])
+			if err != nil {
+				return errors.Errorf("parse values %v err", line)
+			}
+
+			if err = h.Data(db, table, values); err != nil && err != ErrSkip {
+				return errors.Trace(err)
+			}
+		}
+	}
+	return nil, errors.New("values not found")
+
+}
+
+func (mysc *MyDumpScanner) parseValues(str string) ([]string, error) {
+	// values are seperated by comma, but we can not split using comma directly
+	// string is enclosed by single quote
+
+	// a simple implementation, may be more robust later.
+
 	values := make([]string, 0, 8)
 
 	i := 0
@@ -92,7 +92,7 @@ func (sc *Scanner) parse(str string) ([]string, error) {
 
 			value := str[i : j+1]
 			if escaped {
-				value = sc.unescapeString(value)
+				value = unescapeString(value)
 			}
 			values = append(values, value)
 			// skip ' and ,
@@ -105,7 +105,10 @@ func (sc *Scanner) parse(str string) ([]string, error) {
 	return values, nil
 }
 
-func (sc *Scanner) unescapeString(s string) string {
+// unescapeString un-escapes the string.
+// mysqldump will escape the string when dumps,
+// Refer http://dev.mysql.com/doc/refman/5.7/en/string-literals.html
+func (mysc *MyDumpScanner) unescapeString(s string) string {
 	i := 0
 
 	value := make([]byte, 0, len(s))
@@ -117,7 +120,7 @@ func (sc *Scanner) unescapeString(s string) string {
 				break
 			}
 
-			value = append(value, sc.unescapeChar(s[j]))
+			value = append(value, unescapeChar(s[j]))
 			i += 2
 		} else {
 			value = append(value, s[i])
@@ -128,7 +131,7 @@ func (sc *Scanner) unescapeString(s string) string {
 	return string(value)
 }
 
-func (sc *Scanner) unescapeChar(ch byte) byte {
+func (mysc *MyDumpScanner) unescapeChar(ch byte) byte {
 	// \" \' \\ \n \0 \b \Z \r \t ==> escape to one char
 	switch ch {
 	case 'n':
