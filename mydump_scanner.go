@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -16,44 +16,49 @@ func init() {
 	valuesExp = regexp.MustCompile("^INSERT INTO `(.+?)` VALUES \\((.+)\\);$")
 }
 
-type MyDumpScanner struct {
+type MySQLDumpScanner struct {
 	Buf        *[]byte
 	MaxBufSize int
 	Scanner    *bufio.Scanner
 }
 
-func NewMyDumpScanner(r io.Reader, maxBufSize int) *MyDumpScanner {
+func NewMySQLDumpScanner(r io.Reader, maxBufSize int) *MySQLDumpScanner {
 	buf := []byte{}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(buf, maxBufSize)
-	return &MyDumpScanner{
+	return &MySQLDumpScanner{
 		MaxBufSize: maxBufSize,
 		Scanner:    sc,
 	}
 }
 
-func (mysc *MyDumpScanner) Scan() (*Row, error) {
-	if mysc.Scanner.Scan() {
+func (mysc *MySQLDumpScanner) Scan() (*Row, error) {
+	var row *Row
+	for mysc.Scanner.Scan() {
 		line := mysc.Scanner.Text()
+		if !strings.HasPrefix(line, "INSERT INTO") {
+			continue
+		}
 		if m := valuesExp.FindAllStringSubmatch(line, -1); len(m) == 1 {
 			table := m[0][1]
-
 			values, err := mysc.parseValues(m[0][2])
 			if err != nil {
 				return nil, errors.Errorf("parse values %v err", line)
 			}
+			row = NewRow(table, values)
+			break
 		}
 	}
-	return nil, errors.New("values not found")
+	return row, nil
 }
 
-func (mysc *MyDumpScanner) parseValues(str string) ([]string, error) {
+func (mysc *MySQLDumpScanner) parseValues(str string) ([]string, error) {
 	// values are seperated by comma, but we can not split using comma directly
 	// string is enclosed by single quote
 
 	// a simple implementation, may be more robust later.
 
-	values := make([]interface{}, 0, 8)
+	values := make([]string, 0, 8)
 
 	i := 0
 	for i < len(str) {
@@ -106,7 +111,7 @@ func (mysc *MyDumpScanner) parseValues(str string) ([]string, error) {
 // unescapeString un-escapes the string.
 // mysqldump will escape the string when dumps,
 // Refer http://dev.mysql.com/doc/refman/5.7/en/string-literals.html
-func (mysc *MyDumpScanner) unescapeString(s string) string {
+func (mysc *MySQLDumpScanner) unescapeString(s string) string {
 	i := 0
 
 	value := make([]byte, 0, len(s))
@@ -118,7 +123,7 @@ func (mysc *MyDumpScanner) unescapeString(s string) string {
 				break
 			}
 
-			value = append(value, unescapeChar(s[j]))
+			value = append(value, mysc.unescapeChar(s[j]))
 			i += 2
 		} else {
 			value = append(value, s[i])
@@ -129,7 +134,7 @@ func (mysc *MyDumpScanner) unescapeString(s string) string {
 	return string(value)
 }
 
-func (mysc *MyDumpScanner) unescapeChar(ch byte) byte {
+func (mysc *MySQLDumpScanner) unescapeChar(ch byte) byte {
 	// \" \' \\ \n \0 \b \Z \r \t ==> escape to one char
 	switch ch {
 	case 'n':

@@ -11,6 +11,7 @@ type BigQueryStreamer struct {
 	*bigquery.Uploader
 }
 
-func NewBigQueryStreamer(datasetID, tableID string) *Streamer {
-	u := client.Dataset(datasetID).Table(tableID).Uploader()
+func NewBigQueryStreamer(datasetID, tableID string) *BigQueryStreamer {
+	// u := client.Dataset(datasetID).Table(tableID).Uploader()
+	return nil
 }

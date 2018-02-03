@@ -1,8 +1,6 @@
 package mydump2bq
 
-import (
-	""
-)
+import ()
 
 type MySQLTables map[string]*MySQLTable
 

@@ -16,6 +16,10 @@ type Row struct {
 	RawValues []string
 }
 
+func NewRow(tableName string, rawValues []string) *Row {
+	return nil
+}
+
 func (r *Row) Save() (row map[string]bigquery.Value, insertID string, err error) {
 	err = nil
 	insertID = r.InsertID
@@ -31,7 +35,7 @@ func (r *Row) Save() (row map[string]bigquery.Value, insertID string, err error)
 		} else {
 			v = rawVal
 		}
-		row[r.Table.Column[i]] = v
+		row[r.MySQLTable.Column[i]] = v
 	}
 	return
 }
