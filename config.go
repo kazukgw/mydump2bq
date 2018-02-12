@@ -31,7 +31,6 @@ type MyDump2BQConfig struct {
 	MaxBufferSize int
 	MaxConcurrent int
 	Command       string
-	Options       []string
 }
 
 type TableMapperConfig []TableMapConfig
