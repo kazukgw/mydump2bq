@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 var valuesExp *regexp.Regexp
@@ -47,11 +48,22 @@ func NewScanner(
 
 func (sc *Scanner) Scan() (*Row, error) {
 	var row *Row
-	for sc.Scanner.Scan() {
+	for {
+		ok := sc.Scanner.Scan()
+		if err := sc.Scanner.Err(); err != nil {
+			log.Debug("scanner error")
+			return nil, err
+		}
+		if !ok {
+			log.Debug("scanner encountered EOF")
+			return nil, io.EOF
+		}
+		log.Debug("scanner call text() method")
 		line := sc.Scanner.Text()
 		if !strings.HasPrefix(line, "INSERT INTO") {
 			continue
 		}
+		log.Debug("raw values match with regexp")
 		if m := valuesExp.FindAllStringSubmatch(line, -1); len(m) == 1 {
 			values, err := sc.parseValues(m[0][2])
 			if err != nil {

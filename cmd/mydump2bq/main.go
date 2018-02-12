@@ -15,12 +15,17 @@ import (
 var confFile string
 
 func main() {
+	log.SetLevel(log.InfoLevel)
+	// log.SetLevel(log.DebugLevel)
+	log.Info("start")
 	flag.StringVar(&confFile, "config", "mydump2bq.yml", "config file (ext: yml)")
+	log.Info("load config")
 	conf, err := my2bq.NewConfig(confFile)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
+	log.Info("initalize bigquery client")
 	opt := option.WithServiceAccountFile(conf.BigQuery.ServiceAccountJson)
 	proj := conf.BigQuery.ProjectID
 	ctx := context.Background()
@@ -29,28 +34,47 @@ func main() {
 		log.Fatalf("failed to initialize bq client: %v", err)
 	}
 
+	log.Info("create table mapper")
 	tmapper := my2bq.NewTableMapper(cli, conf.TableMapper)
 
 	wg := &sync.WaitGroup{}
 	for _, tm := range tmapper.TableMaps {
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
+			log.Info("mydump2bq thraed start")
 			var err error
+
+			if err := tm.CreateBigQueryTableIfNotExists(); err != nil {
+				log.Errorf("failed to create bigquery table: %v", err)
+				return
+			}
+
+			log.Info("create streamer")
 			streamer := my2bq.NewStreamer(cli, tm)
+			log.Info("start streamer")
 			streamer.Start()
 
+			log.Info("create dumper")
 			dumper := my2bq.NewDumper(tm, conf.MySQL, conf.MyDump2BQ)
+			log.Info("start dump")
 			err = dumper.Dump(func(r io.Reader) {
+				log.Info("create scanner")
 				scanner, err := my2bq.NewScanner(r, 1024*64, tm)
 				if err != nil {
 					log.Error(err)
 					streamer.StopCh <- true
 					return
 				}
+				log.Info("start scan")
 				for {
 					row, err := scanner.Scan()
 					if err != nil {
-						log.Error(err)
+						if err != io.EOF {
+							log.Error(err)
+						} else {
+							log.Info("finish mysqldump")
+						}
 						streamer.StopCh <- true
 						return
 					}
@@ -65,12 +89,12 @@ func main() {
 			for {
 				select {
 				case err := <-streamer.ErrCh:
-					log.Error(err)
+					log.Errorf("streamer error: %v", err)
 				case <-streamer.DoneCh:
-					break
+					log.Info("mydump2bq thraed done")
+					return
 				}
 			}
-			wg.Done()
 		}()
 	}
 	wg.Wait()
