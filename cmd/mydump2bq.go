@@ -7,11 +7,11 @@ import (
 )
 
 func main() {
-	conf := mydump2bq.BigQueryStreamerConfig{}
+	conf := mydump2bq.Config{}
 	err := conf.Load("example_conf.yml")
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	bqst := NewBigQueryStreamer(conf)
+	bqst := NewStreamer(conf)
 }
