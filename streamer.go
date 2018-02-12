@@ -2,10 +2,9 @@ package mydump2bq
 
 import (
 	"context"
-	//
+
 	"cloud.google.com/go/bigquery"
 	"github.com/pkg/errors"
-	// log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -16,10 +15,11 @@ type Streamer struct {
 	*bigquery.Client
 	*TableMap
 	*bigquery.Uploader
+	RowCh     chan *Row
+	ErrCh     chan error
+	StopCh    chan bool
+	DoneCh    chan bool
 	rowBuffer []*Row
-	rowCh     chan *Row
-	errCh     chan error
-	stopCh    chan bool
 }
 
 func NewStreamer(cli *bigquery.Client, tm *TableMap) *Streamer {
@@ -28,31 +28,31 @@ func NewStreamer(cli *bigquery.Client, tm *TableMap) *Streamer {
 		Client:    cli,
 		TableMap:  tm,
 		Uploader:  u,
+		RowCh:     make(chan *Row),
+		ErrCh:     make(chan error),
+		StopCh:    make(chan bool),
+		DoneCh:    make(chan bool),
 		rowBuffer: []*Row{},
-		rowCh:     make(chan *Row),
-		errCh:     make(chan error),
-		stopCh:    make(chan bool),
 	}
 }
 
-func (st *Streamer) Start(onErr func(error), onStop func()) {
+func (st *Streamer) Start() {
 	go func() {
 		for {
 			select {
-			case r := <-st.rowCh:
+			case r := <-st.RowCh:
 				st.put(r)
-			case <-st.stopCh:
+			case <-st.StopCh:
 				st.Flash()
-				onStop()
-			case err := <-st.errCh:
-				onErr(err)
+				break
 			}
 		}
+		st.DoneCh <- true
 	}()
 }
 
 func (st *Streamer) Put(r *Row) {
-	st.rowCh <- r
+	st.RowCh <- r
 }
 
 func (st *Streamer) put(r *Row) {
@@ -70,6 +70,11 @@ func (st *Streamer) Flash() {
 
 func (st *Streamer) uploaderPut() {
 	go func(rb []*Row) {
+		defer func() {
+			if err := recover(); err != nil {
+				st.ErrCh <- errors.WithStack(errors.Errorf("panic: %s", err))
+			}
+		}()
 		var err error
 		retryCnt := 3
 		for retryCnt > 0 {
@@ -81,7 +86,7 @@ func (st *Streamer) uploaderPut() {
 			retryCnt -= 1
 		}
 		if err != nil {
-			st.errCh <- err
+			st.ErrCh <- errors.WithStack(err)
 		}
 	}(st.rowBuffer)
 }

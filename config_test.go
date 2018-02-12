@@ -18,7 +18,7 @@ BigQuery:
   ProjectID: test_project
   ServiceAccountJson: test.json
 
-Mydump2bq:
+MyDump2BQ:
   MaxBufSize: 65536
   MaxConcurrent: 2
   Command: mysqldump

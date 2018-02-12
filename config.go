@@ -11,7 +11,7 @@ import (
 type Config struct {
 	MySQL       MySQLConfig
 	BigQuery    BigQueryConfig
-	Mydump2bq   Mydump2bqConfig
+	MyDump2BQ   MyDump2BQConfig
 	TableMapper TableMapperConfig
 }
 
@@ -27,10 +27,11 @@ type BigQueryConfig struct {
 	ServiceAccountJson string
 }
 
-type Mydump2bqConfig struct {
+type MyDump2BQConfig struct {
 	MaxBufferSize int
 	MaxConcurrent int
 	Command       string
+	Options       []string
 }
 
 type TableMapperConfig []TableMapConfig
