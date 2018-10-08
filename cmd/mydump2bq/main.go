@@ -18,7 +18,7 @@ func main() {
 	log.SetLevel(log.InfoLevel)
 	// log.SetLevel(log.DebugLevel)
 	log.Info("start")
-	flag.StringVar(&confFile, "config", "mydump2bq.yml", "config file (ext: yml)")
+	flag.StringVar(&confFile, "config", "mydump2bq.yml", "config file (yaml formated)")
 	log.Info("load config")
 	conf, err := my2bq.NewConfig(confFile)
 	if err != nil {
