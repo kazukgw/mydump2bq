@@ -11,7 +11,7 @@ import (
 func TestNewRow(t *testing.T) {
 	tableMap := &TableMap{}
 	rawValues := []string{"val1", "val2"}
-	id, _ := uuid.NewV4()
+	id := uuid.NewV4()
 	scannerID := id.String()
 	r := NewRow(tableMap, rawValues, scannerID)
 	assert.NotNil(t, r)

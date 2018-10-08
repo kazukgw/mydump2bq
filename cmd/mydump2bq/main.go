@@ -12,12 +12,15 @@ import (
 	"google.golang.org/api/option"
 )
 
-var confFile string
+var (
+	VERSION  string
+	confFile string
+)
 
 func main() {
 	log.SetLevel(log.InfoLevel)
 	// log.SetLevel(log.DebugLevel)
-	log.Info("start")
+	log.Infof("mydump2bq (version: %s)", VERSION)
 	flag.StringVar(&confFile, "config", "mydump2bq.yml", "config file (yaml formated)")
 	log.Info("load config")
 	conf, err := my2bq.NewConfig(confFile)

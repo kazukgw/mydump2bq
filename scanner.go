@@ -33,10 +33,7 @@ func NewScanner(
 	buf := []byte{}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(buf, maxBufSize)
-	id, err := uuid.NewV4()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
+	id := uuid.NewV4()
 	scanner := &Scanner{
 		ID:         id.String(),
 		MaxBufSize: maxBufSize,
