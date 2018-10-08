@@ -23,4 +23,11 @@ services:
       - ./:/work
     command: tail -f /dev/null
 
-
+  golang:
+    image: golang
+    container_name: mydump2bq_golang
+    links:
+      - mysql
+    volumes:
+      - ./:/work
+    command: tail -f /dev/null
