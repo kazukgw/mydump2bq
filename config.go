@@ -41,6 +41,7 @@ type TableMapConfig struct {
 		Table    string
 	}
 	BigQuery struct {
+		ProjectID string
 		DatasetID string
 		TableID   string
 		Schema    []TableMapFieldConfig

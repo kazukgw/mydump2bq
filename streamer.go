@@ -118,6 +118,28 @@ func (st *Streamer) Put(r *Row) {
 }
 
 func (st *Streamer) Flash() {
-	st.rowBufCh <- st.rowBuffer
+	rb := st.rowBuffer
+	defer func() {
+		if err := recover(); err != nil {
+			st.ErrCh <- errors.WithStack(errors.Errorf("panic: %s", err))
+		}
+	}()
+	var err error
+	retryCnt := 3
+	sleep := int64(2)
+	for retryCnt > 0 {
+		ctx := context.Background()
+		err = st.Uploader.Put(ctx, rb)
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Duration(sleep) * time.Second)
+		sleep = sleep * int64(2)
+		retryCnt -= 1
+	}
+	if err != nil {
+		log.Errorf("upload error: %s", err)
+		st.ErrCh <- errors.WithStack(err)
+	}
 	st.rowBuffer = []*Row{}
 }

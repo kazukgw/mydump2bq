@@ -2,6 +2,7 @@ package mydump2bq
 
 import (
 	"context"
+	"strings"
 
 	"cloud.google.com/go/bigquery"
 	"github.com/pkg/errors"
@@ -24,28 +25,25 @@ func NewBigQueryClient(conf *Config) (*bigquery.Client, error) {
 	return client, err
 }
 
+var bigqueryFieldTypes []bigquery.FieldType = []bigquery.FieldType{
+	bigquery.StringFieldType,
+	bigquery.BytesFieldType,
+	bigquery.IntegerFieldType,
+	bigquery.FloatFieldType,
+	bigquery.BooleanFieldType,
+	bigquery.TimestampFieldType,
+	bigquery.RecordFieldType,
+	bigquery.DateFieldType,
+	bigquery.TimeFieldType,
+	bigquery.DateTimeFieldType,
+}
+
 func GetBigQueryFieldType(ftype string) bigquery.FieldType {
-	if ftype == "string" {
-		return bigquery.StringFieldType
-	} else if ftype == "bytes" {
-		return bigquery.BytesFieldType
-	} else if ftype == "integer" {
-		return bigquery.IntegerFieldType
-	} else if ftype == "float" {
-		return bigquery.FloatFieldType
-	} else if ftype == "boolean" {
-		return bigquery.BooleanFieldType
-	} else if ftype == "timestamp" {
-		return bigquery.TimestampFieldType
-	} else if ftype == "record" {
-		return bigquery.RecordFieldType
-	} else if ftype == "date" {
-		return bigquery.DateFieldType
-	} else if ftype == "time" {
-		return bigquery.TimeFieldType
-	} else if ftype == "datetime" {
-		return bigquery.DateTimeFieldType
-	} else {
-		return bigquery.StringFieldType
+	ftypeUpper := strings.ToUpper(ftype)
+	for _, t := range bigqueryFieldTypes {
+		if ftypeUpper == string(t) {
+			return t
+		}
 	}
+	return bigquery.StringFieldType
 }

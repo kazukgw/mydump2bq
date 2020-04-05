@@ -30,29 +30,33 @@ func (r *Row) Save() (row map[string]bigquery.Value, insertID string, err error)
 	for i, rawVal := range r.RawValues {
 		var v interface{}
 		var e error
-		switch t := schema[i].Type; t {
-		case bigquery.StringFieldType:
-			v = rawVal
-		case bigquery.BytesFieldType:
-			v = rawVal
-		case bigquery.IntegerFieldType:
-			v, e = strconv.ParseInt(rawVal, 10, 64)
-		case bigquery.FloatFieldType:
-			v, e = strconv.ParseFloat(rawVal, 64)
-		case bigquery.BooleanFieldType:
-			v = rawVal != ""
-		case bigquery.TimestampFieldType:
-			v = rawVal
-		case bigquery.RecordFieldType:
-			v = rawVal
-		case bigquery.DateFieldType:
-			v = rawVal
-		case bigquery.TimeFieldType:
-			v = rawVal
-		case bigquery.DateTimeFieldType:
-			v = rawVal
-		default:
-			v = rawVal
+		if rawVal == "NULL" {
+			v = nil
+		} else {
+			switch t := schema[i].Type; t {
+			case bigquery.StringFieldType:
+				v = rawVal
+			case bigquery.BytesFieldType:
+				v = rawVal
+			case bigquery.IntegerFieldType:
+				v, e = strconv.ParseInt(rawVal, 10, 64)
+			case bigquery.FloatFieldType:
+				v, e = strconv.ParseFloat(rawVal, 64)
+			case bigquery.BooleanFieldType:
+				v = rawVal != ""
+			case bigquery.TimestampFieldType:
+				v = rawVal
+			case bigquery.RecordFieldType:
+				v = rawVal
+			case bigquery.DateFieldType:
+				v = rawVal
+			case bigquery.TimeFieldType:
+				v = rawVal
+			case bigquery.DateTimeFieldType:
+				v = rawVal
+			default:
+				v = rawVal
+			}
 		}
 		if e != nil {
 			errs += e.Error() + ";"

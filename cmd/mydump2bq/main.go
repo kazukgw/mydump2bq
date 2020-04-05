@@ -13,15 +13,24 @@ import (
 )
 
 var (
-	VERSION  string
-	confFile string
+	VERSION   string
+	confFile  string
+	debugFlag bool
 )
 
 func main() {
-	log.SetLevel(log.InfoLevel)
-	// log.SetLevel(log.DebugLevel)
-	log.Infof("mydump2bq (version: %s)", VERSION)
 	flag.StringVar(&confFile, "config", "mydump2bq.yml", "config file (yaml formated)")
+	flag.BoolVar(&debugFlag, "debug", false, "debug flag")
+	flag.Parse()
+
+	if debugFlag {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
+	log.Infof("mydump2bq (version: %s)", VERSION)
+
 	log.Info("load config")
 	conf, err := my2bq.NewConfig(confFile)
 	if err != nil {
@@ -41,10 +50,15 @@ func main() {
 	tmapper := my2bq.NewTableMapper(cli, conf.TableMapper)
 
 	wg := &sync.WaitGroup{}
-	for _, tm := range tmapper.TableMaps {
+	c := make(chan bool, conf.MyDump2BQ.MaxConcurrent)
+	for _, tmap := range tmapper.TableMaps {
+		c <- true
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		go func(tm *my2bq.TableMap) {
+			defer func() {
+				wg.Done()
+				<-c
+			}()
 			log.Info("mydump2bq thraed start")
 			var err error
 
@@ -98,7 +112,7 @@ func main() {
 					return
 				}
 			}
-		}()
+		}(tmap)
 	}
 	wg.Wait()
 }

@@ -20,27 +20,7 @@ func NewTableMapper(cli *bigquery.Client, conf TableMapperConfig) *TableMapper {
 	return &TableMapper{Client: cli, TableMaps: tmaps}
 }
 
-type TableMap struct {
-	Config TableMapConfig
-	*bigquery.Dataset
-	*bigquery.Table
-	*bigquery.TableMetadata
-}
-
-func NewTableMap(
-	cli *bigquery.Client,
-	tmConf TableMapConfig,
-) *TableMap {
-	ds := cli.Dataset(tmConf.BigQuery.DatasetID)
-	tbl := ds.Table(tmConf.BigQuery.TableID)
-	return &TableMap{
-		Config:  tmConf,
-		Dataset: ds,
-		Table:   tbl,
-	}
-}
-
-func (tm *TableMap) CreateBigQueryTableIfNotExists() error {
+func (tmapper TableMapper) CreateBigQueryTableIfNotExists(tm *TableMap) error {
 	var err error
 
 	ctx := context.Background()
@@ -62,7 +42,42 @@ func (tm *TableMap) CreateBigQueryTableIfNotExists() error {
 	tm.TableMetadata = meta
 
 	return nil
+}
 
+func (tmapper *TableMapper) CreateBigQueryTableIfNotExistsAll() error {
+	for _, tm := range tmapper.TableMaps {
+		err := tmapper.CreateBigQueryTableIfNotExists(tm)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
+}
+
+type TableMap struct {
+	Config TableMapConfig
+	*bigquery.Dataset
+	*bigquery.Table
+	*bigquery.TableMetadata
+}
+
+func NewTableMap(
+	cli *bigquery.Client,
+	tmConf TableMapConfig,
+) *TableMap {
+	prj := tmConf.BigQuery.ProjectID
+	var ds *bigquery.Dataset
+	if prj == "" {
+		ds = cli.Dataset(tmConf.BigQuery.DatasetID)
+	} else {
+		ds = cli.DatasetInProject(prj, tmConf.BigQuery.DatasetID)
+	}
+	tbl := ds.Table(tmConf.BigQuery.TableID)
+	return &TableMap{
+		Config:  tmConf,
+		Dataset: ds,
+		Table:   tbl,
+	}
 }
 
 func (tm *TableMap) BigQuerySchema() bigquery.Schema {
