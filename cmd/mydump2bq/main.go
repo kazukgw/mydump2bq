@@ -10,6 +10,7 @@ import (
 	my2bq "github.com/kazukgw/mydump2bq"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/api/option"
+	// github.com/urfave/cli/v2
 )
 
 var (
