@@ -3,8 +3,8 @@ module github.com/kazukgw/mydump2bq
 go 1.14
 
 require (
-	cloud.google.com/go v0.56.0
-	cloud.google.com/go/bigquery v1.5.0
+	cloud.google.com/go v0.94.1
+	cloud.google.com/go/bigquery v1.24.0
 	git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
@@ -24,11 +24,8 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.6.2
 	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20200403201458-baeed622b8d8 // indirect
-	golang.org/x/tools v0.0.0-20200403190813-44a64ad78b9b // indirect
-	google.golang.org/api v0.21.0
-	google.golang.org/genproto v0.0.0-20200403120447-c50568487044 // indirect
+	github.com/stretchr/testify v1.6.1
+	google.golang.org/api v0.57.0
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/ini.v1 v1.55.0 // indirect
 )

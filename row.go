@@ -1,6 +1,7 @@
 package mydump2bq
 
 import (
+	"fmt"
 	"strconv"
 
 	"cloud.google.com/go/bigquery"

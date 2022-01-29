@@ -41,7 +41,7 @@ TableMapper:
 	}
 
 	assert.Equal(t, "test-host", conf.MySQL.Host)
-	assert.Equal(t, 3306, conf.MySQL.Port)
+			assert.Equal(t, 3306, conf.MySQL.Port)
 	assert.Equal(t, 1, len(conf.TableMapper))
 	assert.Equal(t, "test", conf.TableMapper[0].MySQL.Database)
 }
